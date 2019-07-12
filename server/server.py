@@ -1,7 +1,9 @@
 import os
 import cv2
 import face_recognition
+import threading
 
+from PIL import Image, ImageTk
 from gpiozero import LED
 from time import sleep
 
@@ -26,22 +28,22 @@ class Toplevel1:
            top is the toplevel containing window.'''
         _bgcolor = '#d9d9d9'  # X11 color: 'gray85'
         _fgcolor = '#000000'  # X11 color: 'black'
-        _compcolor = '#d9d9d9'  # X11 color: 'gray85'
-        _ana1color = '#d9d9d9'  # X11 color: 'gray85'
-        _ana2color = '#ececec'  # Closest X11 color: 'gray92'
+        _compcolor = '#d9d9d9' # X11 color: 'gray85'
+        _ana1color = '#d9d9d9' # X11 color: 'gray85'
+        _ana2color = '#ececec' # Closest X11 color: 'gray92'
 
-        top.geometry("941x400+615+126")
+        top.geometry("941x400+729+301")
         top.title("Facelock")
         top.configure(borderwidth="2")
         top.configure(background="#e6f7ff")
         top.configure(highlightbackground="#d9d9d9")
         top.configure(highlightcolor="black")
 
-        self.menubar = tk.Menu(top, font="TkMenuFont", bg=_bgcolor, fg=_fgcolor)
-        top.configure(menu=self.menubar)
+        self.menubar = tk.Menu(top,font="TkMenuFont",bg=_bgcolor,fg=_fgcolor)
+        top.configure(menu = self.menubar)
 
         self.Button1 = tk.Button(top)
-        self.Button1.place(relx=0.744, rely=0.825, height=24, width=107)
+        self.Button1.place(relx=0.744, rely=0.85, height=24, width=107)
         self.Button1.configure(activebackground="#ececec")
         self.Button1.configure(activeforeground="#000000")
         self.Button1.configure(background="#d9d9d9")
@@ -52,123 +54,39 @@ class Toplevel1:
         self.Button1.configure(pady="0")
         self.Button1.configure(text='''New User''')
 
-        self.Canvas1 = tk.Canvas(top)
-        self.Canvas1.place(relx=0.648, rely=0.075, relheight=0.708
-                           , relwidth=0.301)
-        self.Canvas1.configure(background="#d9d9d9")
-        self.Canvas1.configure(borderwidth="2")
-        self.Canvas1.configure(highlightbackground="#d9d9d9")
-        self.Canvas1.configure(highlightcolor="black")
-        self.Canvas1.configure(insertbackground="black")
-        self.Canvas1.configure(relief="ridge")
-        self.Canvas1.configure(selectbackground="#c4c4c4")
-        self.Canvas1.configure(selectforeground="black")
-        self.Canvas1.configure(width=283)
+        self.stream = tk.Label(top)
+        self.stream.place(relx=0.032, rely=0.05, height=351, width=554)
+        self.stream.configure(background="#d9d9d9")
+        self.stream.configure(disabledforeground="#a3a3a3")
+        self.stream.configure(foreground="#000000")
+        self.stream.configure(width=554)
 
-        self.Canvas2 = tk.Canvas(top)
-        self.Canvas2.place(relx=0.032, rely=0.075, relheight=0.833
-                           , relwidth=0.588)
-        self.Canvas2.configure(background="#d9d9d9")
-        self.Canvas2.configure(borderwidth="2")
-        self.Canvas2.configure(highlightbackground="#d9d9d9")
-        self.Canvas2.configure(highlightcolor="black")
-        self.Canvas2.configure(insertbackground="black")
-        self.Canvas2.configure(relief="ridge")
-        self.Canvas2.configure(selectbackground="#c4c4c4")
-        self.Canvas2.configure(selectforeground="black")
-        self.Canvas2.configure(width=553)
+        self.avatar = tk.Label(top)
+        self.avatar.place(relx=0.638, rely=0.05, height=311, width=314)
+        self.avatar.configure(background="#d9d9d9")
+        self.avatar.configure(disabledforeground="#a3a3a3")
+        self.avatar.configure(foreground="#000000")
+        self.avatar.configure(width=314)
 
-class Server:
-    host = 'http://192.168.0.7'
-    port = 8000
-    stream_url = 'stream.mjpg'
+
+class RestingScreen(threading.Thread):
 
     def __init__(self):
+        threading.Thread.__init__(self)
+        self.start()
 
-        # initialize face encodings
-        self.initKnownEncodings()
 
-        url = self.host + ':' + str(self.port) + '/' + self.stream_url
-        self.cap = cv2.VideoCapture(url)
-
-        # initalize gpio / led
-        self.green = LED(17)
-
-        # only unlock door every (delay) seconds
-
-        fps = 24
-        delay = 3
-
-        self.reset = fps * delay
-        self.timer = 0
-
+    def run(self):
         self.vp_start_gui()
-
-
-    def initKnownEncodings(self):
-        # make a list of all the available images
-        known_faces = os.listdir('dataset')
-        known_faces_encodings = []
-        for file in known_faces:
-            image = face_recognition.load_image_file('dataset/' + file)
-            encoding = face_recognition.face_encodings(image)[0]
-            known_faces_encodings.append(encoding)
-        self.known_faces = known_faces
-        self.known_faces_encodings = known_faces_encodings
-
-    def process_frame(self):
-
-        ret, frame = self.cap.read()
-
-        # cv2.imshow("img", frame)
-
-        if (self.timer <= 0):
-            if (self.find_approved_user(frame)):
-                timer = self.reset
-        else:
-            self.timer -= 1
-
-        if cv2.waitKey(1) == 27:
-            exit(0)
-
-        self.root.after(0, self.process_frame)
-
-
-
-    def find_approved_user(self, frame):
-        small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
-
-        # Convert image from BGR (openCV) to RGB (face_recognition)
-        rgb_small_frame = small_frame[:, :, ::-1]
-
-        # Find all the faces and face encodings in the current frame of video
-        face_locations = face_recognition.face_locations(rgb_small_frame)
-        face_encodings = face_recognition.face_encodings(rgb_small_frame, face_locations)
-
-        face_names = []
-        for face_encoding in face_encodings:
-            matches = face_recognition.compare_faces(self.known_faces_encodings, face_encoding)
-            name = "Unknown"
-            if True in matches:
-                first_match_index = matches.index(True)
-                name = self.known_faces[first_match_index]
-                print(name)
-                self.green.on()
-                sleep(2)
-                self.green.off()
-                return True
-
-        return False
-
 
     def vp_start_gui(self):
         '''Starting point when module is the main routine.'''
         global val, w, root
-        self.root = tk.Tk()
-        top = Toplevel1 (self.root)
-        resting_state_support.init(self.root, top)
-
-        self.root.mainloop()
+        root = tk.Tk()
+        top = Toplevel1 (root)
+        self.top = top
+        resting_state_support.init(root, top)
+        root.mainloop()
 
     w = None
     def create_Toplevel1(self, root, *args, **kwargs):
@@ -185,5 +103,110 @@ class Server:
         w.destroy()
         w = None
 
+
+    def show_avatar(self, avatar):
+        avatar_label = self.top.avatar
+
+        avatar_label.configure(image=avatar)
+
+        # necessary to keep a reference to image so it is not removed by garbage collector
+        avatar_label.image = avatar
+
+        return False
+
+    def update_stream(self, frame):
+        self.top.stream.configure(image=frame)
+        self.top.stream._backbuffer_ = frame
+
+class Server:
+    host = 'http://192.168.0.7'
+    port = 8000
+    stream_url = 'stream.mjpg'
+
+    def __init__(self):
+
+        # launch gui
+        self.screen = RestingScreen()
+
+        # initialize face encodings
+        self.initKnownEncodings()
+
+        url = self.host + ':' + str(self.port) + '/' + self.stream_url
+        cap = cv2.VideoCapture(url)
+
+        # initalize gpio / led
+        self.green = LED(17)
+
+        fps = 24
+        delay = 3
+
+        reset = fps * delay
+        timer = 0
+
+        while True:
+            ret, frame = cap.read()
+
+            tki_frame = self.cv2_to_tkinter(frame)
+            self.screen.update_stream(tki_frame)
+
+            if (timer <= 0):
+                if (self.process_frame(frame)):
+                    timer = reset
+            else:
+                timer -= 1
+
+            if cv2.waitKey(1) == 27:
+                exit(0)
+
+    def initKnownEncodings(self):
+        # make a list of all the available images
+        known_faces = os.listdir('dataset')
+        known_faces_encodings = []
+        for file in known_faces:
+            image = face_recognition.load_image_file('dataset/' + file)
+            encoding = face_recognition.face_encodings(image)[0]
+            known_faces_encodings.append(encoding)
+        self.known_faces = known_faces
+        self.known_faces_encodings = known_faces_encodings
+
+    def flash_led(self):
+        self.green.on()
+        sleep(1)
+        self.green.off()
+
+    #def refresh_gui_frame(self, frame):
+
+
+
+    def cv2_to_tkinter(self, cv2_image):
+        tki = ImageTk.PhotoImage(Image.fromarray(cv2.cvtColor(cv2_image, cv2.COLOR_BGR2RGB)))
+        return tki
+
+    def process_frame(self, frame):
+        small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
+
+        # Convert image from BGR (openCV) to RGB (face_recognition)
+        rgb_small_frame = small_frame[:, :, ::-1]
+
+        # Find all the faces and face encodings in the current frame of video
+        face_locations = face_recognition.face_locations(rgb_small_frame)
+        face_encodings = face_recognition.face_encodings(rgb_small_frame, face_locations)
+
+        face_names = []
+        for face_encoding in face_encodings:
+            matches = face_recognition.compare_faces(self.known_faces_encodings, face_encoding)
+
+            if True in matches:
+                first_match_index = matches.index(True)
+                name = self.known_faces[first_match_index]
+
+                self.flash_led()
+                print("Recognized " + name)
+
+                tki_avatar = self.cv2_to_tkinter(cv2.imread('dataset/' + name))
+                self.screen.show_avatar(tki_avatar)
+                return True
+
+        return False
 
 s = Server()
