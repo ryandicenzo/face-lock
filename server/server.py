@@ -2,6 +2,7 @@ import os
 import cv2
 import face_recognition
 import threading
+import sys
 
 from PIL import Image, ImageTk
 from gpiozero import LED
@@ -22,6 +23,7 @@ except ImportError:
 from support import resting_state_support
 
 
+
 class Toplevel1:
     def __init__(self, top=None):
         '''This class configures and populates the toplevel window.
@@ -32,10 +34,10 @@ class Toplevel1:
         _ana1color = '#d9d9d9' # X11 color: 'gray85'
         _ana2color = '#ececec' # Closest X11 color: 'gray92'
 
-        top.geometry("941x400+729+301")
+        top.geometry("957x442+628+328")
         top.title("Facelock")
         top.configure(borderwidth="2")
-        top.configure(background="#e6f7ff")
+        top.configure(background="#e8e8e8")
         top.configure(highlightbackground="#d9d9d9")
         top.configure(highlightcolor="black")
 
@@ -43,7 +45,7 @@ class Toplevel1:
         top.configure(menu = self.menubar)
 
         self.Button1 = tk.Button(top)
-        self.Button1.place(relx=0.744, rely=0.85, height=24, width=107)
+        self.Button1.place(relx=0.773, rely=0.747, height=24, width=107)
         self.Button1.configure(activebackground="#ececec")
         self.Button1.configure(activeforeground="#000000")
         self.Button1.configure(background="#d9d9d9")
@@ -55,18 +57,22 @@ class Toplevel1:
         self.Button1.configure(text='''New User''')
 
         self.stream = tk.Label(top)
-        self.stream.place(relx=0.032, rely=0.05, height=351, width=554)
+        self.stream.place(relx=0.021, rely=0.045, height=391, width=584)
+        self.stream.configure(activebackground="#f9f9f9")
+        self.stream.configure(activeforeground="black")
         self.stream.configure(background="#d9d9d9")
         self.stream.configure(disabledforeground="#a3a3a3")
         self.stream.configure(foreground="#000000")
-        self.stream.configure(width=554)
+        self.stream.configure(highlightbackground="#d9d9d9")
+        self.stream.configure(highlightcolor="black")
+        self.stream.configure(width=584)
 
         self.avatar = tk.Label(top)
-        self.avatar.place(relx=0.638, rely=0.05, height=311, width=314)
+        self.avatar.place(relx=0.69, rely=0.068, height=281, width=264)
         self.avatar.configure(background="#d9d9d9")
         self.avatar.configure(disabledforeground="#a3a3a3")
         self.avatar.configure(foreground="#000000")
-        self.avatar.configure(width=314)
+        self.avatar.configure(width=264)
 
 
 class RestingScreen(threading.Thread):
@@ -83,18 +89,20 @@ class RestingScreen(threading.Thread):
         '''Starting point when module is the main routine.'''
         global val, w, root
         root = tk.Tk()
-        top = Toplevel1 (root)
+        top = Toplevel1(root)
         self.top = top
+
         resting_state_support.init(root, top)
         root.mainloop()
 
     w = None
+
     def create_Toplevel1(self, root, *args, **kwargs):
         '''Starting point when module is imported by another program.'''
         global w, w_win, rt
         rt = root
-        w = tk.Toplevel (root)
-        top = Toplevel1 (w)
+        w = tk.Toplevel(root)
+        top = Toplevel1(w)
         resting_state_support.init(w, top, *args, **kwargs)
         return (w, top)
 
@@ -102,7 +110,6 @@ class RestingScreen(threading.Thread):
         global w
         w.destroy()
         w = None
-
 
     def show_avatar(self, avatar):
         avatar_label = self.top.avatar
@@ -127,6 +134,11 @@ class Server:
 
         # launch gui
         self.screen = RestingScreen()
+
+        # load default avatar
+
+        default_avatar = self.cv2_to_tkinter(cv2.imread('../resources/default-avatar.jpg'))
+        self.screen.show_avatar(default_avatar)
 
         # initialize face encodings
         self.initKnownEncodings()
