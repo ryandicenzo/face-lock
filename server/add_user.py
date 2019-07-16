@@ -118,7 +118,6 @@ if __name__ == '__main__':
 
 
 def update_stream(self, frame):
-    self.top.stream.configure(image=frame)
-    self.top.stream._backbuffer_ = frame
+    root.frame.
 
 

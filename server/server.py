@@ -5,7 +5,6 @@ import threading
 import csv
 import sys
 
-
 from PIL import Image, ImageTk
 from gpiozero import LED
 from time import sleep
@@ -23,7 +22,6 @@ except ImportError:
     py3 = True
 
 from support import resting_state_support
-
 
 
 class Toplevel1:
@@ -128,7 +126,6 @@ class RestingScreen(threading.Thread):
         self.top.stream._backbuffer_ = frame
 
 class Server:
-
     with open('ip_data.csv', newline='') as csvfile:
         reader = csv.reader(csvfile)
 
@@ -165,6 +162,7 @@ class Server:
 
         # initalize gpio / led
         self.green = LED(17)
+        self.lock = LED(26)
 
         fps = 24
         delay = 3
@@ -198,14 +196,11 @@ class Server:
         self.known_faces = known_faces
         self.known_faces_encodings = known_faces_encodings
 
-    def flash_led(self):
-        self.green.on()
-        sleep(1)
-        self.green.off()
+    def unlock_door(self):
+        self.lock.on()
 
-    #def refresh_gui_frame(self, frame):
-
-
+    def lock_door(self):
+        self.lock.off()
 
     def cv2_to_tkinter(self, cv2_image):
         tki = ImageTk.PhotoImage(Image.fromarray(cv2.cvtColor(cv2_image, cv2.COLOR_BGR2RGB)))
@@ -229,12 +224,15 @@ class Server:
                 first_match_index = matches.index(True)
                 name = self.known_faces[first_match_index]
 
-                self.flash_led()
+                self.lock.blink(5,0,1)
+                self.green.blink(1,0.3,3) # flash LED once for one second
                 print("Recognized " + name)
 
                 tki_avatar = self.cv2_to_tkinter(cv2.imread('dataset/' + name))
                 self.screen.show_avatar(tki_avatar)
                 return True
+            else:
+                self.green.blink(0.05, 0.05, 10)
 
         return False
 
