@@ -2,7 +2,9 @@ import os
 import cv2
 import face_recognition
 import threading
+import csv
 import sys
+
 
 from PIL import Image, ImageTk
 from gpiozero import LED
@@ -126,8 +128,23 @@ class RestingScreen(threading.Thread):
         self.top.stream._backbuffer_ = frame
 
 class Server:
-    host = 'http://192.168.0.7'
-    port = 8000
+
+    with open('ip_data.csv', newline='') as csvfile:
+        reader = csv.reader(csvfile)
+
+        next(reader) # pass over template row
+
+        info = next(reader)
+
+        try:
+            host = info[0]
+        except:
+            print('Please specify host in ip_data')
+        try:
+            port = info[1]
+        except:
+            print('Please specify port in ip_data')
+
     stream_url = 'stream.mjpg'
 
     def __init__(self):

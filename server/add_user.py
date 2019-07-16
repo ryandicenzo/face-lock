@@ -117,6 +117,8 @@ if __name__ == '__main__':
     vp_start_gui()
 
 
-
+def update_stream(self, frame):
+    self.top.stream.configure(image=frame)
+    self.top.stream._backbuffer_ = frame
 
 
