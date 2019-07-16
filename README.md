@@ -1,7 +1,17 @@
 # face-lock
 Face-recognition based door lock for use in access control systems.
 
-## Setup
+## Hardware:
+
+Raspberry Pi Zero W with Camera Module (USB Camera will suffice)
+Solenoid lock
+5V Relay
+12V battery source
+Jumper cables 
+
+(More detailed specifications coming soon)
+
+
 
 ## How to get DLIB / face_recognition running on Windows:
 
