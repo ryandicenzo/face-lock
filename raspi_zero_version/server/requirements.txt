@@ -1,0 +1,7 @@
+cmake
+opencv-python
+face_recognition
+pyttsx3
+gtts
+playsound
+todoist-python
