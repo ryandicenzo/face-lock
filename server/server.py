@@ -3,11 +3,12 @@ import cv2
 import face_recognition
 import threading
 import csv
-import sys
+import numpy as np
 
+from urllib.request import urlopen
 from PIL import Image, ImageTk
-from gpiozero import LED
-from time import sleep
+#from gpiozero import LED
+#from time import sleep
 
 try:
     import Tkinter as tk
@@ -142,7 +143,7 @@ class Server:
         except:
             print('Please specify port in ip_data')
 
-    stream_url = 'stream.mjpg'
+    stream_url = 'capture'
 
     def __init__(self):
 
@@ -157,12 +158,14 @@ class Server:
         # initialize face encodings
         self.initKnownEncodings()
 
-        url = self.host + ':' + str(self.port) + '/' + self.stream_url
-        cap = cv2.VideoCapture(url)
+
+        url = 'http://' + self.host + '/' + self.stream_url # "http://192.168.x.x/capture"
+
+
 
         # initalize gpio / led
-        self.green = LED(17)
-        self.lock = LED(26)
+        # self.green = LED(17)
+        # self.lock = LED(26)
 
         fps = 24
         delay = 3
@@ -171,7 +174,10 @@ class Server:
         timer = 0
 
         while True:
-            ret, frame = cap.read()
+
+            resp = urlopen(url)
+            image = np.asarray(bytearray(resp.read()), dtype="uint8")
+            frame = cv2.imdecode(image, cv2.IMREAD_COLOR)
 
             tki_frame = self.cv2_to_tkinter(frame)
             self.screen.update_stream(tki_frame)
@@ -224,15 +230,17 @@ class Server:
                 first_match_index = matches.index(True)
                 name = self.known_faces[first_match_index]
 
-                self.lock.blink(5,0,1)
-                self.green.blink(1,0.3,3) # flash LED once for one second
+                # self.lock.blink(5,0,1)
+                # self.green.blink(1,0.3,3) # flash LED once for one second
                 print("Recognized " + name)
 
                 tki_avatar = self.cv2_to_tkinter(cv2.imread('dataset/' + name))
                 self.screen.show_avatar(tki_avatar)
                 return True
             else:
-                self.green.blink(0.05, 0.05, 10)
+                print ("unknown face detected")
+
+                # self.green.blink(0.05, 0.05, 10)
 
         return False
 
