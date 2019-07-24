@@ -7,8 +7,6 @@ import numpy as np
 
 from urllib.request import urlopen
 from PIL import Image, ImageTk
-#from gpiozero import LED
-#from time import sleep
 
 try:
     import Tkinter as tk
@@ -127,23 +125,28 @@ class RestingScreen(threading.Thread):
         self.top.stream._backbuffer_ = frame
 
 class Server:
-    with open('ip_data.csv', newline='') as csvfile:
-        reader = csv.reader(csvfile)
+    
 
-        next(reader) # pass over template row
+    def loadServerInfo(self):
+        with open('ip_data.csv', newline='') as csvfile:
+            reader = csv.reader(csvfile)
 
-        info = next(reader)
+            next(reader) # pass over template row
 
-        try:
-            host = info[0]
-        except:
-            print('Please specify host in ip_data')
-        try:
-            port = info[1]
-        except:
-            print('Please specify port in ip_data')
+            info = next(reader)
 
-    stream_url = 'capture'
+            try:
+                host = info[0]
+            except:
+                print('Please specify host in ip_data')
+            try:
+                port = info[1]
+            except:
+                print('Please specify port in ip_data')
+
+        stream_url = 'capture'
+
+        self.url = 'http://' + self.host + '/' + self.stream_url # "http://192.168.x.x/capture"
 
     def __init__(self):
 
@@ -151,31 +154,23 @@ class Server:
         self.screen = RestingScreen()
 
         # load default avatar
-
         default_avatar = self.cv2_to_tkinter(cv2.imread('../resources/default-avatar.jpg'))
         self.screen.show_avatar(default_avatar)
 
         # initialize face encodings
         self.initKnownEncodings()
 
-
-        url = 'http://' + self.host + '/' + self.stream_url # "http://192.168.x.x/capture"
-
-
-
-        # initalize gpio / led
-        # self.green = LED(17)
-        # self.lock = LED(26)
+        # grab desired url from user_data.csv
+        self.loadServerInfo()
 
         fps = 24
-        delay = 3
+        delay = 3   # after we unlock the door, we want to wait <delay> seconds before continuing
 
         reset = fps * delay
         timer = 0
 
         while True:
-
-            resp = urlopen(url)
+            resp = urlopen(self.url)
             image = np.asarray(bytearray(resp.read()), dtype="uint8")
             frame = cv2.imdecode(image, cv2.IMREAD_COLOR)
 
@@ -203,10 +198,12 @@ class Server:
         self.known_faces_encodings = known_faces_encodings
 
     def unlock_door(self):
-        self.lock.on()
+#       self.lock.on() // this needs to be updated to ESP-32 standards
+        return False
 
     def lock_door(self):
-        self.lock.off()
+#       self.lock.off()  // this needs to be updated to ESP-32 standards
+        return False
 
     def cv2_to_tkinter(self, cv2_image):
         tki = ImageTk.PhotoImage(Image.fromarray(cv2.cvtColor(cv2_image, cv2.COLOR_BGR2RGB)))
