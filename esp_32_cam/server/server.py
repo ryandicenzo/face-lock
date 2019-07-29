@@ -4,6 +4,7 @@ import face_recognition
 import threading
 import csv
 import numpy as np
+import socket
 
 from urllib.request import urlopen
 from PIL import Image, ImageTk
@@ -19,6 +20,9 @@ try:
 except ImportError:
     import tkinter.ttk as ttk
     py3 = True
+
+import sys
+sys.path.append("..")
 
 from support import resting_state_support
 
@@ -136,15 +140,15 @@ class Server:
             info = next(reader)
 
             try:
-                host = info[0]
+                self.host = info[0]
             except:
                 print('Please specify host in ip_data')
             try:
-                port = info[1]
+                self.port = info[1]
             except:
                 print('Please specify port in ip_data')
 
-        stream_url = 'capture'
+        self.stream_url = 'capture'
 
         self.url = 'http://' + self.host + '/' + self.stream_url # "http://192.168.x.x/capture"
 
@@ -163,6 +167,9 @@ class Server:
         # grab desired url from user_data.csv
         self.loadServerInfo()
 
+        # start tcp
+        self.initTCP()
+
         fps = 24
         delay = 3   # after we unlock the door, we want to wait <delay> seconds before continuing
 
@@ -170,9 +177,12 @@ class Server:
         timer = 0
 
         while True:
-            resp = urlopen(self.url)
-            image = np.asarray(bytearray(resp.read()), dtype="uint8")
-            frame = cv2.imdecode(image, cv2.IMREAD_COLOR)
+            try:
+                resp = urlopen(self.url)
+                image = np.asarray(bytearray(resp.read()), dtype="uint8")
+                frame = cv2.imdecode(image, cv2.IMREAD_COLOR)
+            except:
+                continue
 
             tki_frame = self.cv2_to_tkinter(frame)
             self.screen.update_stream(tki_frame)
@@ -196,6 +206,27 @@ class Server:
             known_faces_encodings.append(encoding)
         self.known_faces = known_faces
         self.known_faces_encodings = known_faces_encodings
+
+    def initTCP(self):
+        host = '0.0.0.0'
+        port = 8090
+
+        self.s = socket.socket()
+        self.s.bind((host, port))
+        self.s.listen(1)
+
+        c, addr = self.s.accept()
+        self.c = c
+        c.send(b'test')
+
+    def sendTCPOn(self):
+        c, addr = self.s.accept()
+        c.send(b'1')
+
+    def sendTCPOff(self):
+        c, addr = self.s.accept()
+        c.send(b'0')
+
 
     def unlock_door(self):
 #       self.lock.on() // this needs to be updated to ESP-32 standards
@@ -230,6 +261,7 @@ class Server:
                 # self.lock.blink(5,0,1)
                 # self.green.blink(1,0.3,3) # flash LED once for one second
                 print("Recognized " + name)
+                self.sendTCPOn()
 
                 tki_avatar = self.cv2_to_tkinter(cv2.imread('dataset/' + name))
                 self.screen.show_avatar(tki_avatar)
